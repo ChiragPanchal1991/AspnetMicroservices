@@ -1,4 +1,5 @@
 ﻿using Basket.API.Entities;
+using Basket.API.GrpcServices;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using System;
@@ -9,10 +10,12 @@ namespace Basket.API.Repositories
     public class BasketRepository : IBasketRepository
     {
         private readonly IDistributedCache _redisCache;
+        private readonly DiscountGrpcService _discountGrpcService;
 
-        public BasketRepository(IDistributedCache redisCache)
+        public BasketRepository(IDistributedCache redisCache, DiscountGrpcService discountGrpcService)
         {
             _redisCache = redisCache ?? throw new ArgumentNullException(nameof(redisCache));
+            _discountGrpcService = discountGrpcService ?? throw new ArgumentNullException(nameof(discountGrpcService));
         }
 
         public async Task<ShoppingCart> GetBasket(string userName)
@@ -27,6 +30,14 @@ namespace Basket.API.Repositories
 
         public async Task<ShoppingCart> UpdateBasket(ShoppingCart basket)
         {
+
+            foreach (var item in basket.Items)
+            {
+                var discount = await _discountGrpcService.GetDiscount(item.ProductName);
+
+                item.Price -= discount.Amount;
+            }
+
             await _redisCache.SetStringAsync(basket.UserName, JsonConvert.SerializeObject(basket));
 
             return await GetBasket(basket.UserName);
