@@ -24,6 +24,7 @@ namespace Ordering.API.Extensions
                 try
                 {
                     logger.LogInformation("Migrating database associated with context {DbContextName}", typeof(TContext).Name);
+                    logger.LogInformation("Database connection string {connection}", context.Database.GetConnectionString());
 
                     InvokeSeeder(seeder, context, services);
 
